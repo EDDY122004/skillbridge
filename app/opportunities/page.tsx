@@ -1,0 +1,81 @@
+import { Briefcase, Search, Sparkles } from "lucide-react";
+
+const opportunities = [
+  {
+    title: "Frontend Developer Intern",
+    company: "NovaTech Labs",
+    type: "Internship",
+    description: "Build responsive interfaces and collaborate with product teams.",
+    required: ["HTML", "CSS", "JavaScript", "React"],
+  },
+  {
+    title: "Junior Web Developer",
+    company: "BluePeak Studio",
+    type: "Job",
+    description: "Maintain client websites and implement modern UI/UX features.",
+    required: ["Web Development", "Responsive Design", "SQL"],
+  },
+  {
+    title: "Cybersecurity Analyst Trainee",
+    company: "SecureGrid Ltd",
+    type: "Project",
+    description: "Support infrastructure monitoring and digital security awareness.",
+    required: ["Cybersecurity", "Network Security", "Data Protection"],
+  },
+];
+
+export default function OpportunitiesPage() {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">Opportunities</p>
+          <h1 className="mt-2 text-3xl font-bold text-white">Find roles aligned with your skills</h1>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 md:w-[320px]">
+          <Search size={18} className="text-slate-500" />
+          <input
+            placeholder="Search opportunities"
+            className="w-full bg-transparent text-white outline-none placeholder:text-slate-500"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {opportunities.map((opportunity) => (
+          <div key={opportunity.title} className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-cyan-300">
+                  <Briefcase size={16} />
+                  <span className="text-sm">{opportunity.type}</span>
+                </div>
+                <h2 className="text-2xl font-bold text-white">{opportunity.title}</h2>
+                <p className="mt-1 text-slate-400">{opportunity.company}</p>
+              </div>
+
+              <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-2 text-sm text-cyan-300">
+                <Sparkles size={16} />
+                91% match
+              </div>
+            </div>
+
+            <p className="mt-4 text-slate-300">{opportunity.description}</p>
+
+            <div className="mt-5">
+              <p className="mb-2 text-sm text-slate-400">Required skills</p>
+              <div className="flex flex-wrap gap-2">
+                {opportunity.required.map((skill) => (
+                  <span key={skill} className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-sm text-slate-300">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
