@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Bell, Moon, Menu } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
