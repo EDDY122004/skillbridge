@@ -1,4 +1,37 @@
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { saveAuthSession } from "@/lib/storage";
+
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("demo@skillbridge.com");
+  const [password, setPassword] = useState("password123");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const users = JSON.parse(localStorage.getItem("skillbridge-users") || "[]");
+    const user = users.find(
+      (item: any) => item.email === email && item.password === password
+    );
+
+    if (!user) {
+      setError("Invalid email or password. Please use the demo account or create a new account.");
+      return;
+    }
+
+    saveAuthSession({
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role || "learner",
+    });
+
+    router.push("/dashboard");
+  };
+
   return (
     <div className="mx-auto max-w-md px-4 py-16">
       <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-soft">
@@ -7,11 +40,13 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-slate-400">Sign in to continue your learning journey</p>
         </div>
 
-        <form className="space-y-5">
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
             <label className="mb-2 block text-sm text-slate-300">Email</label>
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none ring-0 placeholder:text-slate-500 focus:border-cyan-500"
             />
@@ -21,10 +56,14 @@ export default function LoginPage() {
             <label className="mb-2 block text-sm text-slate-300">Password</label>
             <input
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
             />
           </div>
+
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           <button
             type="submit"
@@ -35,8 +74,9 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-5 text-center text-sm text-slate-400">
-          Don&apos;t have an account? <a href="/signup" className="font-medium text-cyan-300">Create one</a>
+          Don&apos;t have an account? <Link href="/signup" className="font-medium text-cyan-300">Create one</Link>
         </p>
+        <p className="mt-3 text-center text-xs text-slate-500">Demo login: demo@skillbridge.com / password123</p>
       </div>
     </div>
   );
