@@ -1,80 +1,98 @@
-import { Briefcase, Search, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Briefcase, Sparkles, TrendingUp } from "lucide-react";
+import { calculateMatchScore, dashboardStats, opportunities, skillFocus, userProfile } from "@/lib/data";
 
-const opportunities = [
-  {
-    title: "Frontend Developer Intern",
-    company: "NovaTech Labs",
-    type: "Internship",
-    description: "Build responsive interfaces and collaborate with product teams.",
-    required: ["HTML", "CSS", "JavaScript", "React"],
-  },
-  {
-    title: "Junior Web Developer",
-    company: "BluePeak Studio",
-    type: "Job",
-    description: "Maintain client websites and implement modern UI/UX features.",
-    required: ["Web Development", "Responsive Design", "SQL"],
-  },
-  {
-    title: "Cybersecurity Analyst Trainee",
-    company: "SecureGrid Ltd",
-    type: "Project",
-    description: "Support infrastructure monitoring and digital security awareness.",
-    required: ["Cybersecurity", "Network Security", "Data Protection"],
-  },
+const learningProgress = [
+  { skill: "Web Development", progress: 78, status: "Strong progress" },
+  { skill: "Database Management", progress: 64, status: "Improving" },
+  { skill: "Cybersecurity", progress: 42, status: "Needs focus" },
 ];
 
-export default function OpportunitiesPage() {
+export default function DashboardPage() {
+  const recommended = opportunities.map((opportunity) => ({
+    ...opportunity,
+    result: calculateMatchScore(userProfile.skills, opportunity.requiredSkills),
+  }));
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">Opportunities</p>
-          <h1 className="mt-2 text-3xl font-bold text-white">Find roles aligned with your skills</h1>
+      <div className="mb-8">
+        <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">Dashboard</p>
+        <h1 className="mt-2 text-3xl font-bold text-white">Welcome back, {userProfile.name.split(" ")[0]}</h1>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-4">
+        {dashboardStats.map((stat) => (
+          <div key={stat.label} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            <div className="text-3xl font-bold text-cyan-400">{stat.value}</div>
+            <div className="mt-1 text-sm text-slate-400">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <TrendingUp className="text-cyan-300" size={18} />
+            <h2 className="text-xl font-semibold text-white">Learning progress</h2>
+          </div>
+
+          <div className="space-y-5">
+            {learningProgress.map((item) => (
+              <div key={item.skill}>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-slate-300">{item.skill}</span>
+                  <span className="text-cyan-300">{item.progress}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700">
+                  <div className="h-full rounded-full bg-cyan-500" style={{ width: `${item.progress}%` }} />
+                </div>
+                <div className="mt-2 text-xs text-slate-400">{item.status}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 md:w-[320px]">
-          <Search size={18} className="text-slate-500" />
-          <input
-            placeholder="Search opportunities"
-            className="w-full bg-transparent text-white outline-none placeholder:text-slate-500"
-          />
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <Briefcase className="text-cyan-300" size={18} />
+            <h2 className="text-xl font-semibold text-white">Recommended opportunities</h2>
+          </div>
+
+          <div className="space-y-4">
+            {recommended.slice(0, 3).map((opportunity) => (
+              <div key={opportunity.id} className="rounded-2xl border border-slate-700 bg-slate-950 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-white">{opportunity.title}</h3>
+                    <p className="text-sm text-slate-400">{opportunity.type}</p>
+                  </div>
+                  <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-300">
+                    {opportunity.result.score}% match
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="space-y-6">
-        {opportunities.map((opportunity) => (
-          <div key={opportunity.title} className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="mb-2 flex items-center gap-2 text-cyan-300">
-                  <Briefcase size={16} />
-                  <span className="text-sm">{opportunity.type}</span>
-                </div>
-                <h2 className="text-2xl font-bold text-white">{opportunity.title}</h2>
-                <p className="mt-1 text-slate-400">{opportunity.company}</p>
-              </div>
-
-              <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-2 text-sm text-cyan-300">
-                <Sparkles size={16} />
-                91% match
-              </div>
-            </div>
-
-            <p className="mt-4 text-slate-300">{opportunity.description}</p>
-
-            <div className="mt-5">
-              <p className="mb-2 text-sm text-slate-400">Required skills</p>
-              <div className="flex flex-wrap gap-2">
-                {opportunity.required.map((skill) => (
-                  <span key={skill} className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-sm text-slate-300">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
+      <div className="mt-10 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="text-cyan-300" size={18} />
+            <h2 className="text-xl font-semibold text-white">Skill focus</h2>
           </div>
-        ))}
+          <Link href="/opportunities" className="text-sm text-cyan-300">See all opportunities</Link>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+          {skillFocus.map((skill) => (
+            <div key={skill} className="rounded-2xl bg-slate-950 p-4 text-slate-300">
+              {skill}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

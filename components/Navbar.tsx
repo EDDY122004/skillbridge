@@ -1,39 +1,64 @@
-import Link from "next/link";
-import { Bell, Compass, LayoutDashboard, UserCircle2 } from "lucide-react";
+# SkillBridge
 
-export function Navbar() {
-  const navItems = [
-    { href: "/", label: "Home" },
-    { href: "/explore", label: "Explore" },
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/opportunities", label: "Opportunities" },
-    { href: "/profile", label: "Profile" },
-  ];
+SkillBridge is a web and mobile-first skills development and opportunity matching system designed for students, job seekers, freelancers, and beginners who want to build practical digital skills and discover opportunities that match their strengths.
 
-  return (
-    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <Link href="/" className="text-2xl font-black text-white">
-          SkillBridge
-        </Link>
+## Project vision
 
-        <nav className="hidden items-center gap-6 md:flex">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="text-sm text-slate-300 transition hover:text-white">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+The platform helps users to:
+- create and manage personal profiles
+- explore skill categories and related concepts
+- access learning resources
+- track skill development progress
+- view opportunities and recommended roles
+- identify missing skills and learning gaps
 
-        <div className="flex items-center gap-3">
-          <button className="rounded-full border border-slate-700 p-2 text-slate-300">
-            <Bell size={16} />
-          </button>
-          <Link href="/login" className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950">
-            Login
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
+## Core features
+- responsive landing page
+- user dashboard
+- skills exploration page
+- dynamic skill detail pages
+- opportunity matching logic
+- admin overview page
+- mock API for skill data access
+
+## Tech stack
+- Next.js
+- TypeScript
+- Tailwind CSS
+- React
+- Lucide Icons
+
+## Local setup
+
+```bash
+npm install
+npm run dev
+```
+
+Then visit:
+- http://localhost:3000
+
+## Main modules
+- `/` — landing page
+- `/explore` — skill discovery
+- `/skills/[slug]` — concept and resource detail
+- `/dashboard` — progress and opportunity match overview
+- `/opportunities` — recommended jobs and roles
+- `/profile` — learner profile
+- `/admin` — system management overview
+
+## Project development alignment
+
+This implementation supports the final-year project objectives described in the proposal by covering:
+- skill catalog formation
+- related concept and resource organization
+- user profiling and progress tracking
+- opportunity matching logic
+- responsive mobile-first interface design
+
+## Future enhancements
+- Supabase authentication and database integration
+- secure role-based access for learners, providers, and admins
+- real recommendation engine and skill matching filters
+- conversation and mentoring modules
+- mobile app packaging with PWA or native wrapper
