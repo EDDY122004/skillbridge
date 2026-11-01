@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Bell, Menu } from "lucide-react";
+import { Bell, Moon, Menu } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -10,6 +11,8 @@ const navItems = [
 ];
 
 export function Navbar() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -30,11 +33,15 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            className="rounded-full border border-slate-700 p-2 text-slate-300"
+            aria-label="Toggle theme"
+          >
+            <Moon size={16} />
+          </button>
           <button className="rounded-full border border-slate-700 p-2 text-slate-300 md:hidden">
             <Menu size={16} />
-          </button>
-          <button className="hidden rounded-full border border-slate-700 p-2 text-slate-300 md:inline-flex">
-            <Bell size={16} />
           </button>
           <Link
             href="/login"
