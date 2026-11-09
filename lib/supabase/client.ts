@@ -1,47 +1,12 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createBrowserClient } from "@supabase/ssr";
 
-const protectedRoutes = ["/dashboard", "/profile", "/provider", "/admin"];
+export function createClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  const isProtected = protectedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-
-  if (!isProtected) {
-    return NextResponse.next();
+  if (!url || !key) {
+    throw new Error("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
   }
 
-  const authCookie = request.cookies.get("skillbridge-auth")?.value;
-
-  if (!authCookie) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  try {
-    const session = JSON.parse(decodeURIComponent(authCookie));
-    const role = session?.role;
-
-    if (pathname === "/provider" || pathname.startsWith("/provider/")) {
-      if (role !== "provider" && role !== "admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
-
-    if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-      if (role !== "admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
-  } catch {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  return NextResponse.next();
+  return createBrowserClient(url, key);
 }
-
-export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*", "/provider/:path*", "/admin/:path*"],
-};

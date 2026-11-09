@@ -5,27 +5,17 @@ export type AuthSession = {
   role: string;
 };
 
-const AUTH_KEY = "skillbridge-auth";
-const PROFILE_KEY = "skillbridge-profile";
+const PROFILE_CACHE_KEY = "skillbridge-profile";
 
-export function saveAuthSession(session: AuthSession) {
-  localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+// Deprecated auth-session helpers have been removed: authentication and authorization
+// must use Supabase-managed HttpOnly cookies and trusted app_metadata roles.
+export function saveStoredProfile(profile: Record<string, unknown>): void {
+  if (typeof window !== "undefined") localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
 }
 
-export function getAuthSession(): AuthSession | null {
-  const raw = localStorage.getItem(AUTH_KEY);
-  return raw ? JSON.parse(raw) : null;
-}
-
-export function clearAuthSession() {
-  localStorage.removeItem(AUTH_KEY);
-}
-
-export function saveStoredProfile(profile: any) {
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-}
-
-export function getStoredProfile() {
-  const raw = localStorage.getItem(PROFILE_KEY);
-  return raw ? JSON.parse(raw) : null;
+export function getStoredProfile(): Record<string, unknown> | null {
+  if (typeof window === "undefined") return null;
+  const value = localStorage.getItem(PROFILE_CACHE_KEY);
+  if (!value) return null;
+  try { return JSON.parse(value) as Record<string, unknown>; } catch { return null; }
 }

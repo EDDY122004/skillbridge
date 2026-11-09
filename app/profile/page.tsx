@@ -1,126 +1,59 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase, Sparkles, TrendingUp } from "lucide-react";
-import { calculateMatchScore, opportunities, dashboardStats, skillFocus, userProfile } from "@/lib/data";
-import { getAuthSession, getStoredProfile } from "@/lib/storage";
+import { Mail, MapPin, UserCircle2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
-const learningProgress = [
-  { skill: "Web Development", progress: 78, status: "Strong progress" },
-  { skill: "Database Management", progress: 64, status: "Improving" },
-  { skill: "Cybersecurity", progress: 42, status: "Needs focus" },
-];
+type Profile = { name: string; headline: string; email: string; location: string; bio: string; skills: string[] };
+const initialProfile: Profile = { name: "", headline: "", email: "", location: "", bio: "", skills: [] };
+const inputClass = "w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-200 outline-none focus:border-cyan-500";
 
-export default function DashboardPage() {
+export default function ProfilePage() {
   const router = useRouter();
-  const [profile, setProfile] = useState(userProfile);
+  const [profile, setProfile] = useState<Profile>(initialProfile);
+  const [userId, setUserId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const session = getAuthSession();
-
-    if (!session) {
-      router.replace("/login");
-      return;
+    let active = true;
+    async function load() {
+      try {
+        const supabase = createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) { router.replace("/login"); return; }
+        setUserId(user.id);
+        const { data, error: queryError } = await supabase.from("profiles").select("full_name,headline,location,bio,skills").eq("id", user.id).maybeSingle();
+        if (queryError) throw queryError;
+        if (!active) return;
+        setProfile({ name: data?.full_name ?? user.user_metadata?.full_name ?? "", headline: data?.headline ?? "", email: user.email ?? "", location: data?.location ?? "", bio: data?.bio ?? "", skills: data?.skills ?? [] });
+      } catch (caught) { if (active) setError(caught instanceof Error ? caught.message : "Could not load profile. Apply the Supabase schema first."); }
+      finally { if (active) setLoading(false); }
     }
-
-    const saved = getStoredProfile();
-    if (saved) {
-      setProfile({
-        ...userProfile,
-        name: String(saved.name || userProfile.name),
-        role: String(saved.role || userProfile.role),
-        skills: Array.isArray(saved.skills) && saved.skills.length ? (saved.skills as string[]) : userProfile.skills,
-      });
-    }
+    load();
+    return () => { active = false; };
   }, [router]);
 
-  const recommended = opportunities.map((opportunity) => ({
-    ...opportunity,
-    result: calculateMatchScore(profile.skills, opportunity.requiredSkills),
-  }));
-
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-12 pb-24">
-      <div className="mb-8">
-        <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">Dashboard</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">Welcome back, {profile.name.split(" ")[0]}</h1>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-4">
-        {dashboardStats.map((stat) => (
-          <div key={stat.label} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-            <div className="text-3xl font-bold text-cyan-400">{stat.value}</div>
-            <div className="mt-1 text-sm text-slate-400">{stat.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-10 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <div className="mb-5 flex items-center gap-2">
-            <TrendingUp className="text-cyan-300" size={18} />
-            <h2 className="text-xl font-semibold text-white">Learning progress</h2>
-          </div>
-
-          <div className="space-y-5">
-            {learningProgress.map((item) => (
-              <div key={item.skill}>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-slate-300">{item.skill}</span>
-                  <span className="text-cyan-300">{item.progress}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700">
-                  <div className="h-full rounded-full bg-cyan-500" style={{ width: `${item.progress}%` }} />
-                </div>
-                <div className="mt-2 text-xs text-slate-400">{item.status}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <div className="mb-5 flex items-center gap-2">
-            <Briefcase className="text-cyan-300" size={18} />
-            <h2 className="text-xl font-semibold text-white">Recommended opportunities</h2>
-          </div>
-
-          <div className="space-y-4">
-            {recommended.slice(0, 3).map((opportunity) => (
-              <div key={opportunity.id} className="rounded-2xl border border-slate-700 bg-slate-950 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold text-white">{opportunity.title}</h3>
-                    <p className="text-sm text-slate-400">{opportunity.type}</p>
-                  </div>
-                  <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-300">
-                    {opportunity.result.score}% match
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-10 rounded-3xl border border-slate-800 bg-slate-900 p-6">
-        <div className="mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-cyan-300" size={18} />
-            <h2 className="text-xl font-semibold text-white">Skill focus</h2>
-          </div>
-          <Link href="/opportunities" className="text-sm text-cyan-300">See all opportunities</Link>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-4">
-          {skillFocus.map((skill) => (
-            <div key={skill} className="rounded-2xl bg-slate-950 p-4 text-slate-300">
-              {skill}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  function update<K extends keyof Profile>(field: K, value: Profile[K]) { setProfile((current) => ({ ...current, [field]: value })); }
+  async function save() {
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const supabase = createClient();
+      const { error: saveError } = await supabase.from("profiles").upsert({ id: userId, full_name: profile.name.trim(), headline: profile.headline.trim(), location: profile.location.trim(), bio: profile.bio.trim(), skills: profile.skills }, { onConflict: "id" });
+      if (saveError) throw saveError;
+      setNotice("Profile saved.");
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not save your profile."); }
+    finally { setSaving(false); }
+  }
+  if (loading) return <div className="mx-auto max-w-4xl px-4 py-12 text-slate-300">Loading profile…</div>;
+  return <div className="mx-auto max-w-4xl px-4 py-12 pb-24"><div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
+    <div className="flex flex-col gap-6 md:flex-row md:items-center"><div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 text-2xl font-bold text-slate-950">{profile.name.charAt(0) || "?"}</div><div><h1 className="text-3xl font-bold text-white">{profile.name || "Your profile"}</h1><p className="mt-2 text-cyan-300">{profile.headline}</p></div></div>
+    <div className="mt-8 grid gap-6 md:grid-cols-2"><section className="rounded-2xl border border-slate-800 bg-slate-950 p-5"><div className="mb-4 flex items-center gap-2 text-cyan-300"><UserCircle2 size={18}/><h2 className="text-lg font-semibold">Profile overview</h2></div><label className="mb-2 block text-sm text-slate-300" htmlFor="bio">About you</label><textarea id="bio" value={profile.bio} onChange={(e) => update("bio", e.target.value)} className="h-28 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-200 outline-none focus:border-cyan-500"/><label className="mb-2 mt-4 block text-sm text-slate-300" htmlFor="headline">Headline</label><input id="headline" value={profile.headline} onChange={(e) => update("headline", e.target.value)} className={inputClass}/></section>
+    <section className="rounded-2xl border border-slate-800 bg-slate-950 p-5"><div className="mb-4 flex items-center gap-2 text-cyan-300"><Mail size={18}/><h2 className="text-lg font-semibold">Contact details</h2></div><label htmlFor="profileEmail" className="mb-2 block text-sm text-slate-300">Account email</label><input id="profileEmail" disabled value={profile.email} className={`${inputClass} opacity-60`}/><label htmlFor="location" className="mb-2 mt-3 block text-sm text-slate-300">Location</label><div className="flex items-center gap-2"><MapPin size={16}/><input id="location" value={profile.location} onChange={(e) => update("location", e.target.value)} className={inputClass}/></div><label htmlFor="name" className="mb-2 mt-3 block text-sm text-slate-300">Full name</label><input id="name" value={profile.name} onChange={(e) => update("name", e.target.value)} className={inputClass}/></section></div>
+    <div className="mt-8"><label htmlFor="skills" className="mb-4 block text-xl font-semibold text-white">Core skills <span className="text-sm font-normal text-slate-400">(comma-separated)</span></label><textarea id="skills" value={profile.skills.join(", ")} onChange={(e) => update("skills", e.target.value.split(",").map((skill) => skill.trim()).filter(Boolean))} className="h-24 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-200 outline-none focus:border-cyan-500"/></div>
+    {error ? <p role="alert" className="mt-4 text-sm text-red-400">{error}</p> : null}{notice ? <p role="status" className="mt-4 text-sm text-emerald-300">{notice}</p> : null}<div className="mt-8 flex justify-end"><button disabled={saving} onClick={save} className="rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 disabled:opacity-60">{saving ? "Saving…" : "Save profile"}</button></div>
+  </div></div>;
 }

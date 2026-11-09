@@ -1,59 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Briefcase, LayoutDashboard, ShieldCheck, UserCircle2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getDefaultDashboard, type UserRole } from "@/lib/auth";
-import { getAuthSession } from "@/lib/storage";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useState } from "react";
+import { getDefaultDashboard } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 
-const baseNavItems = [
-  { href: "/", label: "Home", icon: BookOpen },
-  { href: "/explore", label: "Skills", icon: BookOpen },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/opportunities", label: "Jobs", icon: Briefcase },
-  { href: "/profile", label: "Profile", icon: UserCircle2 },
-];
+export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(searchParams.get("error") === "auth-not-configured" ? "Authentication is not configured yet. Add the Supabase environment variables and schema before signing in." : "");
+  const [busy, setBusy] = useState(false);
 
-export function MobileBottomNav() {
-  const [session, setSession] = useState<ReturnType<typeof getAuthSession>>(null);
-
-  useEffect(() => {
-    setSession(getAuthSession());
-  }, []);
-
-  const role = (session?.role as UserRole | undefined) ?? "learner";
-  const dashboardHref = getDefaultDashboard(role);
-
-  const navItems = baseNavItems.map((item) =>
-    item.href === "/dashboard"
-      ? { ...item, href: dashboardHref }
-      : item,
-  );
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError || !data.user) throw new Error(authError?.message ?? "Sign-in failed.");
+      const role = data.user.app_metadata?.role;
+      router.replace(getDefaultDashboard(role));
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to sign in. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-950/95 backdrop-blur-md md:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-2 px-2 py-2">
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[10px] text-slate-400 transition hover:bg-slate-900 hover:text-cyan-300"
-          >
-            <Icon size={18} />
-            <span>{label}</span>
-          </Link>
-        ))}
-
-        {!session ? (
-          <Link
-            href="/login"
-            className="flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[10px] text-slate-400 transition hover:bg-slate-900 hover:text-cyan-300"
-          >
-            <ShieldCheck size={18} />
-            <span>Login</span>
-          </Link>
-        ) : null}
+    <div className="mx-auto max-w-md px-4 py-16">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-soft">
+        <div className="mb-8 text-center"><h1 className="text-3xl font-bold text-white">Welcome back</h1><p className="mt-2 text-sm text-slate-400">Sign in to continue your learning journey</p></div>
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div><label htmlFor="email" className="mb-2 block text-sm text-slate-300">Email</label><input id="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-cyan-500" /></div>
+          <div><label htmlFor="password" className="mb-2 block text-sm text-slate-300">Password</label><input id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-500" /></div>
+          {error ? <p role="alert" className="text-sm text-red-400">{error}</p> : null}
+          <button disabled={busy} type="submit" className="w-full rounded-2xl bg-cyan-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-60">{busy ? "Signing in…" : "Sign In"}</button>
+        </form>
+        <p className="mt-5 text-center text-sm text-slate-400">Don&apos;t have an account? <Link href="/signup" className="font-medium text-cyan-300">Create one</Link></p>
       </div>
-    </nav>
+    </div>
   );
 }

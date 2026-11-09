@@ -1,131 +1,29 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { getDefaultDashboard, type UserRole } from "@/lib/auth";
-import { getUsers, saveAuthSession, saveUsers } from "@/lib/storage";
+import { Briefcase, Sparkles, TrendingUp } from "lucide-react";
+import { calculateMatchScore, opportunities, dashboardStats, skillFocus, userProfile } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
 
-const defaultForm = {
-  name: "Student User",
-  email: "demo@skillbridge.com",
-  password: "password123",
-  role: "learner" as UserRole,
-};
-
-export default function SignupPage() {
+const learningProgress = [{ skill: "Web Development", progress: 78, status: "Strong progress" }, { skill: "Database Management", progress: 64, status: "Improving" }, { skill: "Cybersecurity", progress: 42, status: "Needs focus" }];
+export default function DashboardPage() {
   const router = useRouter();
-  const [form, setForm] = useState(defaultForm);
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: name === "role" ? (value as UserRole) : value }));
-  };
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const users = getUsers();
-    const duplicate = users.find(
-      (item) => item.email.toLowerCase() === form.email.toLowerCase(),
-    );
-
-    if (duplicate) {
-      alert("An account with this email already exists. Please log in instead.");
-      return;
+  const [profile, setProfile] = useState(userProfile);
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.replace("/login"); return; }
+        const { data } = await supabase.from("profiles").select("full_name,skills").eq("id", user.id).maybeSingle();
+        if (active) setProfile({ ...userProfile, name: data?.full_name || user.user_metadata?.full_name || userProfile.name, skills: data?.skills?.length ? data.skills : userProfile.skills });
+      } catch { /* Dashboard remains usable with demo content until Supabase is configured. */ }
     }
-
-    const user = {
-      id: `user-${Date.now()}`,
-      name: form.name,
-      email: form.email,
-      password: form.password,
-      role: form.role,
-    };
-
-    const nextUsers = [...users, user];
-    saveUsers(nextUsers);
-    saveAuthSession({
-      userId: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    });
-
-    router.push(getDefaultDashboard(user.role));
-  };
-
-  return (
-    <div className="mx-auto max-w-md px-4 py-16">
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-soft">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white">Create your account</h1>
-          <p className="mt-2 text-sm text-slate-400">Join SkillBridge and start building your future</p>
-        </div>
-
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">Full Name</label>
-            <input
-              name="name"
-              type="text"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Edimond Morara"
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">Email</label>
-            <input
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">Password</label>
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="Create a password"
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">Role</label>
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-500"
-            >
-              <option value="learner">Learner</option>
-              <option value="provider">Provider</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full rounded-2xl bg-cyan-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400"
-          >
-            Create Account
-          </button>
-        </form>
-
-        <p className="mt-5 text-center text-sm text-slate-400">
-          Already have an account? <Link href="/login" className="font-medium text-cyan-300">Sign in</Link>
-        </p>
-      </div>
-    </div>
-  );
+    load(); return () => { active = false; };
+  }, [router]);
+  const recommended = opportunities.map((opportunity) => ({ ...opportunity, result: calculateMatchScore(profile.skills, opportunity.requiredSkills) }));
+  return <div className="mx-auto max-w-6xl px-4 py-12 pb-24"><div className="mb-8"><p className="text-sm uppercase tracking-[0.2em] text-cyan-300">Dashboard</p><h1 className="mt-2 text-3xl font-bold text-white">Welcome back, {profile.name.split(" ")[0]}</h1></div><div className="grid gap-6 md:grid-cols-4">{dashboardStats.map((stat) => <div key={stat.label} className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-3xl font-bold text-cyan-400">{stat.value}</div><div className="mt-1 text-sm text-slate-400">{stat.label}</div></div>)}</div><div className="mt-10 grid gap-6 lg:grid-cols-2"><section className="rounded-3xl border border-slate-800 bg-slate-900 p-6"><div className="mb-5 flex items-center gap-2"><TrendingUp className="text-cyan-300" size={18}/><h2 className="text-xl font-semibold text-white">Learning progress</h2></div><div className="space-y-5">{learningProgress.map((item) => <div key={item.skill}><div className="mb-2 flex items-center justify-between text-sm"><span className="text-slate-300">{item.skill}</span><span className="text-cyan-300">{item.progress}%</span></div><div className="h-2 w-full overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${item.progress}%` }}/></div><div className="mt-2 text-xs text-slate-400">{item.status}</div></div>)}</div></section><section className="rounded-3xl border border-slate-800 bg-slate-900 p-6"><div className="mb-5 flex items-center gap-2"><Briefcase className="text-cyan-300" size={18}/><h2 className="text-xl font-semibold text-white">Recommended opportunities</h2></div><div className="space-y-4">{recommended.slice(0, 3).map((opportunity) => <div key={opportunity.id} className="rounded-2xl border border-slate-700 bg-slate-950 p-4"><div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold text-white">{opportunity.title}</h3><p className="text-sm text-slate-400">{opportunity.type}</p></div><span className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-300">{opportunity.result.score}% match</span></div></div>)}</div></section></div><section className="mt-10 rounded-3xl border border-slate-800 bg-slate-900 p-6"><div className="mb-5 flex items-center justify-between"><div className="flex items-center gap-2"><Sparkles className="text-cyan-300" size={18}/><h2 className="text-xl font-semibold text-white">Skill focus</h2></div><Link href="/opportunities" className="text-sm text-cyan-300">See all opportunities</Link></div><div className="grid gap-4 md:grid-cols-4">{skillFocus.map((skill) => <div key={skill} className="rounded-2xl bg-slate-950 p-4 text-slate-300">{skill}</div>)}</div></section></div>;
 }

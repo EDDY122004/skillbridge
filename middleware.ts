@@ -1,161 +1,53 @@
-export type AuthSession = {
-  userId: string;
-  name: string;
-  email: string;
-  role: string;
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+
+const protectedPaths = ["/dashboard", "/profile", "/provider", "/admin"];
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  if (!isProtected) return NextResponse.next();
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("error", "auth-not-configured");
+    return NextResponse.redirect(login);
+  }
+
+  let response = NextResponse.next({ request });
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (cookiesToSet) => {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", pathname);
+    return NextResponse.redirect(login);
+  }
+
+  // Roles used for access control must be assigned in app_metadata by a trusted server/admin,
+  // never accepted from editable user_metadata or a browser cookie.
+  const role = user.app_metadata?.role ?? "learner";
+  if ((pathname === "/admin" || pathname.startsWith("/admin/")) && role !== "admin") {
+    return NextResponse.redirect(new URL(role === "provider" ? "/provider" : "/dashboard", request.url));
+  }
+  if ((pathname === "/provider" || pathname.startsWith("/provider/")) && role !== "provider" && role !== "admin") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/profile/:path*", "/provider/:path*", "/admin/:path*"],
 };
-
-export type StoredUser = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  role: string;
-};
-
-const AUTH_KEY = "skillbridge-auth";
-const PROFILE_KEY = "skillbridge-profile";
-const USERS_KEY = "skillbridge-users";
-
-const DEMO_USERS: StoredUser[] = [
-  {
-    id: "demo-learner",
-    name: "Student User",
-    email: "demo@skillbridge.com",
-    password: "password123",
-    role: "learner",
-  },
-  {
-    id: "demo-provider",
-    name: "Provider User",
-    email: "provider@skillbridge.com",
-    password: "provider123",
-    role: "provider",
-  },
-  {
-    id: "demo-admin",
-    name: "Admin User",
-    email: "admin@skillbridge.com",
-    password: "admin123",
-    role: "admin",
-  },
-];
-
-function isBrowser(): boolean {
-  return typeof window !== "undefined";
-}
-
-function getCookieValue(name: string): string | null {
-  if (!isBrowser()) {
-    return null;
-  }
-
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-function setCookieValue(name: string, value: string, maxAgeSeconds = 60 * 60 * 24 * 7): void {
-  if (!isBrowser()) {
-    return;
-  }
-
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
-}
-
-function clearCookieValue(name: string): void {
-  if (!isBrowser()) {
-    return;
-  }
-
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
-}
-
-export function saveAuthSession(session: AuthSession): void {
-  if (!isBrowser()) {
-    return;
-  }
-
-  localStorage.setItem(AUTH_KEY, JSON.stringify(session));
-  setCookieValue(AUTH_KEY, JSON.stringify(session));
-}
-
-export function getAuthSession(): AuthSession | null {
-  if (!isBrowser()) {
-    return null;
-  }
-
-  const rawLocal = localStorage.getItem(AUTH_KEY);
-  const rawCookie = getCookieValue(AUTH_KEY);
-  const raw = rawLocal ?? rawCookie;
-
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw) as AuthSession;
-  } catch {
-    return null;
-  }
-}
-
-export function clearAuthSession(): void {
-  if (!isBrowser()) {
-    return;
-  }
-
-  localStorage.removeItem(AUTH_KEY);
-  clearCookieValue(AUTH_KEY);
-}
-
-export function saveStoredProfile(profile: Record<string, unknown>): void {
-  if (!isBrowser()) {
-    return;
-  }
-
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-}
-
-export function getStoredProfile(): Record<string, unknown> | null {
-  if (!isBrowser()) {
-    return null;
-  }
-
-  const raw = localStorage.getItem(PROFILE_KEY);
-  return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
-}
-
-export function getUsers(): StoredUser[] {
-  if (!isBrowser()) {
-    return DEMO_USERS;
-  }
-
-  const stored = localStorage.getItem(USERS_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored) as StoredUser[];
-    } catch {
-      localStorage.removeItem(USERS_KEY);
-    }
-  }
-
-  localStorage.setItem(USERS_KEY, JSON.stringify(DEMO_USERS));
-  return DEMO_USERS;
-}
-
-export function saveUsers(users: StoredUser[]): void {
-  if (!isBrowser()) {
-    return;
-  }
-
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-export function ensureDemoUsers(): StoredUser[] {
-  const users = getUsers();
-  if (users.length === 0) {
-    saveUsers(DEMO_USERS);
-    return DEMO_USERS;
-  }
-  return users;
-}
