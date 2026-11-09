@@ -1,48 +1,59 @@
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { Navbar } from "@/components/Navbar";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { ThemeProvider } from "@/context/ThemeContext";
+"use client";
 
-const inter = Inter({ subsets: ["latin"] });
+import Link from "next/link";
+import { BookOpen, Briefcase, LayoutDashboard, ShieldCheck, UserCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getDefaultDashboard, type UserRole } from "@/lib/auth";
+import { getAuthSession } from "@/lib/storage";
 
-export const metadata: Metadata = {
-  title: "SkillBridge",
-  description: "A mobile-first skills development and opportunity matching platform",
-  manifest: "/manifest.webmanifest",
-  applicationName: "SkillBridge",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "SkillBridge",
-  },
-  icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
-  },
-};
+const baseNavItems = [
+  { href: "/", label: "Home", icon: BookOpen },
+  { href: "/explore", label: "Skills", icon: BookOpen },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/opportunities", label: "Jobs", icon: Briefcase },
+  { href: "/profile", label: "Profile", icon: UserCircle2 },
+];
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#020617",
-};
+export function MobileBottomNav() {
+  const [session, setSession] = useState<ReturnType<typeof getAuthSession>>(null);
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    setSession(getAuthSession());
+  }, []);
+
+  const role = (session?.role as UserRole | undefined) ?? "learner";
+  const dashboardHref = getDefaultDashboard(role);
+
+  const navItems = baseNavItems.map((item) =>
+    item.href === "/dashboard"
+      ? { ...item, href: dashboardHref }
+      : item,
+  );
+
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <ThemeProvider>
-          <div className="min-h-screen bg-slate-950 text-white">
-            <Navbar />
-            <main>{children}</main>
-            <MobileBottomNav />
-          </div>
-        </ThemeProvider>
-      </body>
-    </html>
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-950/95 backdrop-blur-md md:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-2 px-2 py-2">
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[10px] text-slate-400 transition hover:bg-slate-900 hover:text-cyan-300"
+          >
+            <Icon size={18} />
+            <span>{label}</span>
+          </Link>
+        ))}
+
+        {!session ? (
+          <Link
+            href="/login"
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[10px] text-slate-400 transition hover:bg-slate-900 hover:text-cyan-300"
+          >
+            <ShieldCheck size={18} />
+            <span>Login</span>
+          </Link>
+        ) : null}
+      </div>
+    </nav>
   );
 }

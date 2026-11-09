@@ -1,58 +1,45 @@
-"use client";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Navbar } from "@/components/Navbar";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
-import Link from "next/link";
-import { Bell, Moon, Menu } from "lucide-react";
-import { useTheme } from "@/context/ThemeContext";
+const inter = Inter({ subsets: ["latin"] });
 
-const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/explore", label: "Explore" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/opportunities", label: "Opportunities" },
-  { href: "/profile", label: "Profile" },
-];
+export const metadata: Metadata = {
+  title: "SkillBridge",
+  description: "A mobile-first skills development and opportunity matching platform",
+  manifest: "/manifest.webmanifest",
+  applicationName: "SkillBridge",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SkillBridge",
+  },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
+};
 
-export function Navbar() {
-  const { theme, toggleTheme } = useTheme();
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#020617",
+};
 
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/" className="text-xl font-black tracking-tight text-white md:text-2xl">
-          SkillBridge
-        </Link>
-
-        <nav className="hidden items-center gap-6 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm text-slate-300 transition hover:text-white"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggleTheme}
-            className="rounded-full border border-slate-700 p-2 text-slate-300"
-            aria-label="Toggle theme"
-          >
-            <Moon size={16} />
-          </button>
-          <button className="rounded-full border border-slate-700 p-2 text-slate-300 md:hidden">
-            <Menu size={16} />
-          </button>
-          <Link
-            href="/login"
-            className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950"
-          >
-            Login
-          </Link>
+    <html lang="en">
+      <body className={inter.className}>
+        <div className="min-h-screen bg-slate-950 text-white">
+          <Navbar />
+          <main>{children}</main>
+          <MobileBottomNav />
         </div>
-      </div>
-    </header>
+      </body>
+    </html>
   );
 }

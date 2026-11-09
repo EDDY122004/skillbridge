@@ -1,85 +1,59 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { saveAuthSession } from "@/lib/storage";
+import { BookOpen, Briefcase, LayoutDashboard, ShieldCheck, UserCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getDefaultDashboard, type UserRole } from "@/lib/auth";
+import { getAuthSession } from "@/lib/storage";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("demo@skillbridge.com");
-  const [password, setPassword] = useState("password123");
-  const [error, setError] = useState("");
+const baseNavItems = [
+  { href: "/", label: "Home", icon: BookOpen },
+  { href: "/explore", label: "Skills", icon: BookOpen },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/opportunities", label: "Jobs", icon: Briefcase },
+  { href: "/profile", label: "Profile", icon: UserCircle2 },
+];
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+export function MobileBottomNav() {
+  const [session, setSession] = useState<ReturnType<typeof getAuthSession>>(null);
 
-    const users = JSON.parse(localStorage.getItem("skillbridge-users") || "[]");
-    const user = users.find(
-      (item: any) => item.email === email && item.password === password
-    );
+  useEffect(() => {
+    setSession(getAuthSession());
+  }, []);
 
-    if (!user) {
-      setError("Invalid email or password. Please use the demo account or create a new account.");
-      return;
-    }
+  const role = (session?.role as UserRole | undefined) ?? "learner";
+  const dashboardHref = getDefaultDashboard(role);
 
-    saveAuthSession({
-      userId: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role || "learner",
-    });
-
-    router.push("/dashboard");
-  };
+  const navItems = baseNavItems.map((item) =>
+    item.href === "/dashboard"
+      ? { ...item, href: dashboardHref }
+      : item,
+  );
 
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-soft">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white">Welcome back</h1>
-          <p className="mt-2 text-sm text-slate-400">Sign in to continue your learning journey</p>
-        </div>
-
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none ring-0 placeholder:text-slate-500 focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-            />
-          </div>
-
-          {error && <p className="text-sm text-red-400">{error}</p>}
-
-          <button
-            type="submit"
-            className="w-full rounded-2xl bg-cyan-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400"
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-950/95 backdrop-blur-md md:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-2 px-2 py-2">
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[10px] text-slate-400 transition hover:bg-slate-900 hover:text-cyan-300"
           >
-            Sign In
-          </button>
-        </form>
+            <Icon size={18} />
+            <span>{label}</span>
+          </Link>
+        ))}
 
-        <p className="mt-5 text-center text-sm text-slate-400">
-          Don&apos;t have an account? <Link href="/signup" className="font-medium text-cyan-300">Create one</Link>
-        </p>
-        <p className="mt-3 text-center text-xs text-slate-500">Demo login: demo@skillbridge.com / password123</p>
+        {!session ? (
+          <Link
+            href="/login"
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[10px] text-slate-400 transition hover:bg-slate-900 hover:text-cyan-300"
+          >
+            <ShieldCheck size={18} />
+            <span>Login</span>
+          </Link>
+        ) : null}
       </div>
-    </div>
+    </nav>
   );
 }
